@@ -9,33 +9,40 @@ namespace Flood
     {
         static void Main(string[] args)
         {
-            SetSettings();
-            bool startGame = true;
-            while (startGame)
+            SetSettings(30);
+            
+            while (Settings.StartGame)
             {
                 Load();
 
                 Game game = new Game();
                 game.DrawBoard();
-                Thread.Sleep(2000);
+                Thread.Sleep(1000);
                 while (true)
                 {
                     game.Frame();
-                    Thread.Sleep(1000);
+                    Thread.Sleep(500);
                     if (Settings.Finish)
                     {
                         EndGame();
                         break;
                     }
                 }
+
                 Console.SetCursorPosition(35, 13);
                 Console.Write("Сгенерировать всё ещё раз?");
                 Console.SetCursorPosition(39, 14);
                 Console.Write("1 - Да\t2 - Нет");
+
+                Console.SetCursorPosition(38, 16);
+                Console.Write($"Всего поколений: ");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.Write(game.GetGeneration()-1);
+
                 var repeat = Console.ReadKey();
                 if (repeat.KeyChar == '2')
                 {
-                    startGame = false;
+                    Settings.StartGame = false;
                 }
                 Console.Clear();
             }
@@ -156,22 +163,24 @@ namespace Flood
 
         private static void EndGame()
         {
-            Console.Clear();
+            //Console.Clear();
             Console.SetCursorPosition(40, 12);
             string str = "Игра закончена.";
             foreach (var ch in str)
             {
                 Console.Write(ch);
-                Thread.Sleep(300);
+                Thread.Sleep(50);
             }
             Thread.Sleep(500);
         }
 
-        private static void SetSettings()
+        private static void SetSettings(int size)
         {
             Console.SetWindowSize(100, 30);
             Console.SetBufferSize(100, 30);
             Settings.FirstLaunch = false;
+            Settings.StartGame = true;
+            Settings.Size = size;
         }
 
     }
@@ -180,16 +189,22 @@ namespace Flood
     {
         public static bool FirstLaunch { get; set; }
 
+        public static bool StartGame { get; set; }
+
         public static bool Finish { get; set; }
+
+        public static int Size { get; set; }
     }
 
     public class Game
     {
-        int size = 5;
+        int size = Settings.Size;
         int count = 0;
+        int generation = 0;
 
         Status[,] gameBoard;
         Status[,] oldBoard;
+        Status[,] olderBoard;
 
         Random rnd = new Random();
 
@@ -199,7 +214,12 @@ namespace Flood
             Init();
         }
 
-        public void Init()
+        public int GetGeneration()
+        {
+            return generation;
+        }
+
+        private void Init()
         {
             for (int i = 0; i < size; i++)
             {
@@ -208,31 +228,66 @@ namespace Flood
                     gameBoard[i, j] = rnd.Next(1, 3) % 2 == 0 ? Status.Live : Status.Dead;
                 }
             }
+
+            //gameBoard[0, 0] = Status.Dead;
+            //gameBoard[0, 1] = Status.Live;
+            //gameBoard[0, 2] = Status.Live;
+            //gameBoard[0, 3] = Status.Live;
+            //gameBoard[0, 4] = Status.Dead;
+
+            //gameBoard[1, 0] = Status.Live;
+            //gameBoard[1, 1] = Status.Dead;
+            //gameBoard[1, 2] = Status.Dead;
+            //gameBoard[1, 3] = Status.Dead;
+            //gameBoard[1, 4] = Status.Live;
+
+            //gameBoard[2, 0] = Status.Live;
+            //gameBoard[2, 1] = Status.Dead;
+            //gameBoard[2, 2] = Status.Dead;
+            //gameBoard[2, 3] = Status.Dead;
+            //gameBoard[2, 4] = Status.Live;
+
+            //gameBoard[3, 0] = Status.Live;
+            //gameBoard[3, 1] = Status.Dead;
+            //gameBoard[3, 2] = Status.Dead;
+            //gameBoard[3, 3] = Status.Dead;
+            //gameBoard[3, 4] = Status.Live;
+
+            //gameBoard[4, 0] = Status.Dead;
+            //gameBoard[4, 1] = Status.Live;
+            //gameBoard[4, 2] = Status.Live;
+            //gameBoard[4, 3] = Status.Live;
+            //gameBoard[4, 4] = Status.Dead;
+
             count = 0;
             oldBoard = new Status[size, size];
+            olderBoard = new Status[size, size];
             Settings.Finish = false;
         }
 
         public void DrawBoard()
         {
-
+            Console.SetCursorPosition(80, 0);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write($"Generation: {generation}");
             for (int i = 0; i < size; i++)
             {
-                Console.SetCursorPosition(0, (i + 1) * 2);
+                Console.SetCursorPosition(0, /*(*/i /*+ 1) * 2*/);
                 for (int j = 0; j < size; j++)
                 {
                     if (gameBoard[i, j] == Status.Dead)
                     {
                         Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.Write("-\t");
+                        Console.Write("-");
                     }
                     else
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.Write("*\t");
+                        Console.Write("*");
                     }
                 }
             }
+            generation++;
 
         }
 
@@ -268,6 +323,7 @@ namespace Flood
 
                     }
 
+                    //check rules
                     if (currentCell == Status.Dead && countLive == 3)
                     {
                         newBoard[i, j] = ReverseStatus(currentCell);
@@ -285,9 +341,15 @@ namespace Flood
             }
 
             gameBoard = newBoard;
+
             CheckBoard();
 
-            if (count == 2)
+            if (generation % 2 == 0)
+            {
+                olderBoard = gameBoard;
+            }
+
+            if (count == 1)
             {
                 Settings.Finish = true;
             }
@@ -353,6 +415,8 @@ namespace Flood
 
         private void CheckBoard()
         {
+            int olderCount = 0;
+            int oldCount = 0;
 
             for (int i = 0; i < size; i++)
             {
@@ -360,12 +424,20 @@ namespace Flood
                 {
                     if (gameBoard[i, j] != oldBoard[i, j])
                     {
-                        return;
+                        oldCount++;
+                    }
+                    if (gameBoard[i, j] == olderBoard[i, j])
+                    {
+                        olderCount++;
                     }
                 }
             }
+            if (olderCount == size*size || oldCount == size*size)
+            {
+                count++;
+                return;
+            }
 
-            count++;
         }
     }
 

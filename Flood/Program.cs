@@ -9,42 +9,56 @@ namespace Flood
     {
         static void Main(string[] args)
         {
-            SetSettings(30);
-            
+            SetSettings(20);
+
             while (Settings.StartGame)
             {
-                Load();
-
-                Game game = new Game();
-                game.DrawBoard();
-                Thread.Sleep(1000);
-                while (true)
-                {
-                    game.Frame();
-                    Thread.Sleep(500);
-                    if (Settings.Finish)
-                    {
-                        EndGame();
-                        break;
-                    }
-                }
-
-                Console.SetCursorPosition(35, 13);
-                Console.Write("Сгенерировать всё ещё раз?");
-                Console.SetCursorPosition(39, 14);
-                Console.Write("1 - Да\t2 - Нет");
-
-                Console.SetCursorPosition(38, 16);
-                Console.Write($"Всего поколений: ");
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.Write(game.GetGeneration()-1);
-
-                var repeat = Console.ReadKey();
-                if (repeat.KeyChar == '2')
-                {
-                    Settings.StartGame = false;
-                }
+                Console.SetCursorPosition(Settings.Width / 2 - 10, Settings.Height / 2 - 5);
+                Console.Write("Введите размер поля: ");
+                var size = Console.ReadLine();
                 Console.Clear();
+
+                if (int.Parse(size) >= 10 && int.Parse(size) <= 63)
+                {
+                    SetSettings(int.Parse(size));
+
+                    Console.CursorVisible = false;
+
+                    Console.SetCursorPosition(Settings.Width / 2 - 10, Settings.Height / 2 - 5);
+                    Console.Write("Выберите режим:");
+
+                    Console.SetCursorPosition(Settings.Width / 2 - 15, Settings.Height / 2 - 4);
+                    Console.Write("1 - Обычные правила (S3_B23)");
+
+                    Console.SetCursorPosition(Settings.Width / 2 - 15, Settings.Height / 2 - 3);
+                    Console.Write("2 - \"День и Ночь\" (B3678_S34678)");
+
+                    var mode = Console.ReadKey();
+
+                    switch (mode.KeyChar)
+                    {
+                        case '1':
+
+                            Game_B3_S23 game = new Game_B3_S23();
+                            Load();
+                            GameFrame(game);
+
+                            break;
+
+                        case '2':
+
+                            Game_B3678_S34678 gameDay = new Game_B3678_S34678();
+                            Load();
+                            GameFrame(gameDay);
+
+                            break;
+
+                        default:
+                            break;
+                    }
+
+                }
+
             }
 
         }
@@ -99,23 +113,25 @@ namespace Flood
 
         private static void Load()
         {
-            int left = 50;
+            Console.Clear();
+
+            int left = Settings.Width / 2;
             int i = 0;
             int sleep = 100;
             int count = 3; // end - 5
 
-            Console.SetCursorPosition(left - 4, 12);
+            Console.SetCursorPosition(left - 4, Settings.Height / 2 - 5);
             Console.Write("Загрузка:");
 
             while (true)
             {
-                Console.SetCursorPosition(left, 13);
+                Console.SetCursorPosition(left, Settings.Height / 2 - 4);
                 Console.Write('.');
 
                 Thread.Sleep(50);
                 Console.CursorVisible = false;
 
-                Console.SetCursorPosition(left, 13);
+                Console.SetCursorPosition(left, Settings.Height / 2 - 4);
                 Console.Write('.');
 
                 Thread.Sleep(sleep);
@@ -130,9 +146,9 @@ namespace Flood
                     Console.Clear();
                     i = 0;
 
-                    left = 50;
+                    left = Settings.Width / 2;
 
-                    Console.SetCursorPosition(left - 4, 12);
+                    Console.SetCursorPosition(left - 4, Settings.Height / 2 - 5);
                     Console.ForegroundColor = GetRandomColor();
                     Console.Write("Загрузка:");
                     count++;
@@ -142,13 +158,15 @@ namespace Flood
                     Settings.FirstLaunch = true;
                     Console.Clear();
 
-                    Console.SetCursorPosition(left - 3, 12);
-                    string str = "Начинаем";
-                    foreach (var ch in str)
-                    {
-                        Console.Write(ch);
-                        Thread.Sleep(50);
-                    }
+                    Console.SetCursorPosition(left - 3, Settings.Height / 2 - 5);
+
+                    //string str = "Начинаем";
+                    //foreach (var ch in str)
+                    //{
+                    //    Console.Write(ch);
+                    //    Thread.Sleep(50);
+                    //}
+
                     Thread.Sleep(500);
 
                     Console.ForegroundColor = ConsoleColor.White;
@@ -161,26 +179,54 @@ namespace Flood
 
         }
 
-        private static void EndGame()
+        private static void GameFrame(Game game)
         {
-            //Console.Clear();
-            Console.SetCursorPosition(40, 12);
-            string str = "Игра закончена.";
-            foreach (var ch in str)
+            game.DrawBoard();
+            Thread.Sleep(1000);
+            while (true)
             {
-                Console.Write(ch);
-                Thread.Sleep(50);
+                game.Frame();
+                Thread.Sleep(125);
+                if (Settings.Finish)
+                {
+                    game.EndGame();
+                    break;
+                }
             }
-            Thread.Sleep(500);
+
+            var repeat = Console.ReadKey();
+            if (repeat.KeyChar == '2')
+            {
+                Settings.StartGame = false;
+            }
+            Console.Clear();
         }
 
         private static void SetSettings(int size)
         {
-            Console.SetWindowSize(100, 30);
-            Console.SetBufferSize(100, 30);
+            int width = size * 2 + 40;
+            int height = size;
+
+            var oldWidth = Console.WindowWidth;
+
+            if (oldWidth > width)
+            {
+                Console.SetWindowSize(width, height);
+                Console.SetBufferSize(width, height);
+            }
+            else
+            {
+                Console.SetBufferSize(width, height);
+                Console.SetWindowSize(width, height);
+            }
+
+            Console.CursorVisible = false;
+
             Settings.FirstLaunch = false;
             Settings.StartGame = true;
             Settings.Size = size;
+            Settings.Width = width;
+            Settings.Height = height;
         }
 
     }
@@ -194,24 +240,72 @@ namespace Flood
         public static bool Finish { get; set; }
 
         public static int Size { get; set; }
+
+        public static int Height { get; set; }
+
+        public static int Width { get; set; }
     }
 
-    public class Game
+    public abstract class Game
     {
-        int size = Settings.Size;
-        int count = 0;
-        int generation = 0;
+        internal int height = Settings.Size;
+        internal int width = Settings.Size * 2;
 
-        Status[,] gameBoard;
-        Status[,] oldBoard;
-        Status[,] olderBoard;
+        internal int count = 0;
+        internal int generation = 0;
 
-        Random rnd = new Random();
+        internal Status[,] gameBoard;
+        internal Status[,] oldBoard;
+        internal Status[,] olderBoard;
+
+        internal Random rnd = new Random();
 
         public Game()
         {
-            gameBoard = new Status[size, size];
+            gameBoard = new Status[height, width];
             Init();
+        }
+
+        private void Init()
+        {
+            for (int i = 0; i < height; i++)
+            {
+                for (int j = 0; j < width; j++)
+                {
+                    gameBoard[i, j] = rnd.Next(1, 3) % 2 == 0 ? Status.Live : Status.Dead;
+                }
+            }
+
+            count = 0;
+            oldBoard = new Status[height, width];
+            olderBoard = new Status[height, width];
+            Settings.Finish = false;
+        }
+
+        public void EndGame()
+        {
+            //Console.Clear();
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.SetCursorPosition(Settings.Width / 2 - 5, Settings.Height / 2 - 5);
+            string str = "Игра закончена.";
+            foreach (var ch in str)
+            {
+                Console.Write(ch);
+                Thread.Sleep(50);
+            }
+            Thread.Sleep(500);
+
+            Console.SetCursorPosition(Settings.Width / 2 - 11, Settings.Height / 2 - 4);
+            Console.Write("Сгенерировать всё ещё раз?");
+            Console.SetCursorPosition(Settings.Width / 2 - 7, Settings.Height / 2 - 3);
+            Console.Write("1 - Да\t2 - Нет");
+
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.SetCursorPosition(Settings.Width / 2 - 8, Settings.Height / 2 - 1);
+            Console.Write($"Всего поколений: ");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write(GetGeneration() - 1);
+            Console.ForegroundColor = ConsoleColor.White;
         }
 
         public int GetGeneration()
@@ -219,109 +313,98 @@ namespace Flood
             return generation;
         }
 
-        private void Init()
-        {
-            for (int i = 0; i < size; i++)
-            {
-                for (int j = 0; j < size; j++)
-                {
-                    gameBoard[i, j] = rnd.Next(1, 3) % 2 == 0 ? Status.Live : Status.Dead;
-                }
-            }
-
-            //gameBoard[0, 0] = Status.Dead;
-            //gameBoard[0, 1] = Status.Live;
-            //gameBoard[0, 2] = Status.Live;
-            //gameBoard[0, 3] = Status.Live;
-            //gameBoard[0, 4] = Status.Dead;
-
-            //gameBoard[1, 0] = Status.Live;
-            //gameBoard[1, 1] = Status.Dead;
-            //gameBoard[1, 2] = Status.Dead;
-            //gameBoard[1, 3] = Status.Dead;
-            //gameBoard[1, 4] = Status.Live;
-
-            //gameBoard[2, 0] = Status.Live;
-            //gameBoard[2, 1] = Status.Dead;
-            //gameBoard[2, 2] = Status.Dead;
-            //gameBoard[2, 3] = Status.Dead;
-            //gameBoard[2, 4] = Status.Live;
-
-            //gameBoard[3, 0] = Status.Live;
-            //gameBoard[3, 1] = Status.Dead;
-            //gameBoard[3, 2] = Status.Dead;
-            //gameBoard[3, 3] = Status.Dead;
-            //gameBoard[3, 4] = Status.Live;
-
-            //gameBoard[4, 0] = Status.Dead;
-            //gameBoard[4, 1] = Status.Live;
-            //gameBoard[4, 2] = Status.Live;
-            //gameBoard[4, 3] = Status.Live;
-            //gameBoard[4, 4] = Status.Dead;
-
-            count = 0;
-            oldBoard = new Status[size, size];
-            olderBoard = new Status[size, size];
-            Settings.Finish = false;
-        }
-
         public void DrawBoard()
         {
-            Console.SetCursorPosition(80, 0);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write($"Generation: {generation}");
-            for (int i = 0; i < size; i++)
+            string board = "";
+            for (int i = 0; i < height; i++)
             {
-                Console.SetCursorPosition(0, /*(*/i /*+ 1) * 2*/);
-                for (int j = 0; j < size; j++)
+                //Console.SetCursorPosition(0, /*(*/i /*+ 1) * 2*/);
+                for (int j = 0; j < width; j++)
                 {
                     if (gameBoard[i, j] == Status.Dead)
                     {
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.Write("-");
+                        //Console.ForegroundColor = ConsoleColor.Gray;
+                        //Console.Write("-");
+                        board += " ";
                     }
                     else
                     {
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.Write("*");
+                        //Console.ForegroundColor = ConsoleColor.Green;
+                        //Console.Write("*");
+                        board += "*";
+                    }
+                }
+                board += "\n";
+            }
+
+            Console.SetCursorPosition(0, 0);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write(board);
+
+            Console.SetCursorPosition(Settings.Width - 20, 0);
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write($"Generation: ");
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write(generation);
+
+            generation++;
+        }
+
+        internal int GetLiveAroundCell(int x, int y)
+        {
+            int result = 0;
+
+            for (int i = -1; i <= 1; i++)
+            {
+                for (int j = -1; j <= 1; j++)
+                {
+                    if (x + i < 0 || x + i >= height)
+                    {
+                        continue;
+                    }
+                    if (y + j < 0 || y + j >= width)
+                    {
+                        continue;
+                    }
+                    if (x + i == x && y + j == y)
+                    {
+                        continue;
+                    }
+
+                    if (gameBoard[x + i, j + y] == Status.Live)
+                    {
+                        result++;
                     }
                 }
             }
-            generation++;
 
+            return result;
         }
 
-        public void Frame()
+        internal Status ReverseStatus(Status status)
         {
-            Status[,] newBoard = new Status[size, size];
+            return status == Status.Dead ? Status.Live : Status.Dead;
+        }
+
+        public abstract void Frame();
+
+    }
+
+    public class Game_B3_S23 : Game
+    {
+        public override void Frame()
+        {
+            Status[,] newBoard = new Status[height, width];
             oldBoard = gameBoard;
 
-            for (int i = 0; i < size; i++)
+            for (int i = 0; i < height; i++)
             {
-                for (int j = 0; j < size; j++)
+                for (int j = 0; j < width; j++)
                 {
                     var currentCell = gameBoard[i, j];
 
-                    var aroundCells = GetAroundCell(i, j);
-
-                    int countDead = 0;
-                    int countLive = 0;
-
-                    foreach (var item in aroundCells)
-                    {
-                        int.TryParse(item.Key.Split(',')[0], out int x);
-                        int.TryParse(item.Key.Split(',')[1], out int y);
-
-                        if (gameBoard[x, y] == Status.Dead)
-                        {
-                            countDead++;
-                        }
-                        else
-                        {
-                            countLive++;
-                        }
-
-                    }
+                    var countLive = GetLiveAroundCell(i, j);
 
                     //check rules
                     if (currentCell == Status.Dead && countLive == 3)
@@ -359,68 +442,15 @@ namespace Flood
 
         }
 
-        private Dictionary<string, Status> GetAroundCell(int i, int j)
-        {
-            var result = new Dictionary<string, Status>();
-
-            //previous row
-            if (i - 1 >= 0)
-            {
-                if (j - 1 >= 0)
-                {
-                    result.Add($"{i - 1}, {j - 1}", gameBoard[i - 1, j - 1]);
-                }
-
-                if (j + 1 < size)
-                {
-                    result.Add($"{i - 1}, {j + 1}", gameBoard[i - 1, j + 1]);
-                }
-
-                result.Add($"{i - 1}, {j}", gameBoard[i - 1, j]);
-            }
-
-            //next row
-            if (i + 1 < size)
-            {
-                if (j - 1 >= 0)
-                {
-                    result.Add($"{i + 1}, {j - 1}", gameBoard[i + 1, j - 1]);
-                }
-
-                if (j + 1 < size)
-                {
-                    result.Add($"{i + 1}, {j + 1}", gameBoard[i + 1, j + 1]);
-                }
-
-                result.Add($"{i + 1}, {j}", gameBoard[i + 1, j]);
-            }
-
-            if (j - 1 >= 0)
-            {
-                result.Add($"{i}, {j - 1}", gameBoard[i, j - 1]);
-            }
-
-            if (j + 1 < size)
-            {
-                result.Add($"{i}, {j + 1}", gameBoard[i, j + 1]);
-            }
-
-            return result;
-        }
-
-        private Status ReverseStatus(Status status)
-        {
-            return status == Status.Dead ? Status.Live : Status.Dead;
-        }
-
         private void CheckBoard()
         {
             int olderCount = 0;
             int oldCount = 0;
+            int size = height * width;
 
-            for (int i = 0; i < size; i++)
+            for (int i = 0; i < height; i++)
             {
-                for (int j = 0; j < size; j++)
+                for (int j = 0; j < width; j++)
                 {
                     if (gameBoard[i, j] != oldBoard[i, j])
                     {
@@ -432,18 +462,102 @@ namespace Flood
                     }
                 }
             }
-            if (olderCount == size*size || oldCount == size*size)
+            if (olderCount == size || oldCount == size)
             {
                 count++;
                 return;
             }
 
         }
+
+    }
+
+    public class Game_B3678_S34678 : Game
+    {
+
+        string countForBirth = "3, 6, 7, 8 ";
+        string countForSurv = "3, 4, 6, 7, 8 ";
+
+        public override void Frame()
+        {
+            Status[,] newBoard = new Status[height, width];
+            oldBoard = gameBoard;
+
+            for (int i = 0; i < height; i++)
+            {
+                for (int j = 0; j < width; j++)
+                {
+                    var currentCell = gameBoard[i, j];
+
+                    var countLive = GetLiveAroundCell(i, j);
+
+                    //check rules
+                    if (currentCell == Status.Dead && countForBirth.Contains(countLive.ToString()))
+                    {
+                        newBoard[i, j] = ReverseStatus(currentCell);
+                    }
+                    else if (currentCell == Status.Live && !countForSurv.Contains(countLive.ToString()))
+                    {
+                        newBoard[i, j] = ReverseStatus(currentCell);
+                    }
+                    else
+                    {
+                        newBoard[i, j] = currentCell;
+                    }
+
+                }
+            }
+
+            gameBoard = newBoard;
+
+            CheckBoard();
+
+            if (generation % 2 == 0)
+            {
+                olderBoard = gameBoard;
+            }
+
+            if (count == 10)
+            {
+                Settings.Finish = true;
+            }
+
+            Console.Clear();
+            DrawBoard();
+        }
+
+        private void CheckBoard()
+        {
+            int olderCount = 0;
+            int oldCount = 0;
+            int size = height * width;
+
+            for (int i = 0; i < height; i++)
+            {
+                for (int j = 0; j < width; j++)
+                {
+                    if (gameBoard[i, j] != oldBoard[i, j])
+                    {
+                        oldCount++;
+                    }
+                    if (gameBoard[i, j] == olderBoard[i, j])
+                    {
+                        olderCount++;
+                    }
+                }
+            }
+            if (olderCount == size || oldCount == size)
+            {
+                count++;
+                return;
+            }
+        }
+
     }
 
     public enum Status
     {
-        Live,
-        Dead
+        Live = 1,
+        Dead = 2
     }
 }
